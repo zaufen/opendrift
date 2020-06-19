@@ -8,7 +8,7 @@
 // Copyright © 2018 Woolsey Workshop.  All rights reserved.
 float scaledResult;
 const int numReadings = 10;    //+++++++++++++-------------------------gyro signal stabilisation ( also creatse lag )--------------------++++++++++++++++++++++++++
-float gyrogain = 0.8;
+float gyrogain = 2; //++++++++++----------------- gyrogain setting
 float serv ;
 
 int readings[numReadings];      // the readings from the analog input
@@ -18,6 +18,7 @@ int average = 0;                // the average
 
 
 #define rcPin1 8
+#define rcPin2 10
 #include <Servo.h>
 Servo myservo;  // create servo object to control a servo
 #include <Wire.h>
@@ -38,6 +39,7 @@ char buffer[7];      // temporary string buffer; used with dtostrf() function
 void setup() {
   
   myservo.attach(9);
+  myservo.write(90);
    Wire.begin();          // initialize I2C bus (MPU6050 module)
    Serial.begin(19200);    // initialize serial bus (Serial Monitor)
    mpu6050.initialize();  // initialize MPU6050 sensor module
@@ -57,30 +59,21 @@ void setup() {
 void loop() {
    // Read raw accel/gyro/temp sensor readings from module
    mpu6050.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-   ch1 = pulseIn(rcPin1, HIGH, 20000); 
- 
-   
-  
-    ch1 = map((ch1), 870, 1950, 0, 180); 
-    
+   ch1 = pulseIn(rcPin1, HIGH, 20000);  
+    ch1 = map((ch1), 870, 1950, 0, 180);     
     if ((ch1 < 2)) {
     ch1 = 90 ;
     } 
-    if ((ch1)< 90){
-    
+    if ((ch1)< 90){    
     ch1 = (90-(ch1));
-    scaledResult = fscale( 0, 90, 0, 90, ch1, 1); // ++++------ last nr sets expo for steering input from the receiver--------+++++++++ 
+    scaledResult = fscale( 0, 90, 0, 90, ch1, -1.7); // ++++------ last nr sets expo for steering input from the receiver--------+++++++++ 
     ch1 = (90-(scaledResult));
     }
      if ((ch1)> 90){    
     ch1 = ((ch1)-90);
-    scaledResult = fscale( 0, 90, 0, 90, ch1, 1); // ++++------ last nr sets expo for steering input from the receiver--------+++++++++ 
+    scaledResult = fscale( 0, 90, 0, 90, ch1, -1.7); // ++++------ last nr sets expo for steering input from the receiver--------+++++++++ 
     ch1 = (90+(scaledResult));
-    }
-      
-   
-
-   
+    }  
   total = total - readings[readIndex]; 
   readings[readIndex] = ((gz)/131); 
   total = total + readings[readIndex]; 
@@ -90,11 +83,17 @@ void loop() {
   } 
   gyro = total / numReadings; 
   serv = ((ch1)+((gyro)*(gyrogain)));
-  Serial.print((gz)/131);
-  Serial.print(" ");
-  Serial.println(gyro);
-  Serial.print(" ");
- 
+     if ((serv < 1)) {
+    serv = 0 ;
+    } 
+       if ((serv >180)) {
+    serv = 180 ;
+    } 
+  
+  serv = map((serv), 0, 180, 30, 150);// ---------++++++++++++ set end points for steering servo here
+  Serial.println(serv);
+  myservo.write(serv);
+   
 }
 
 
